@@ -24,17 +24,19 @@ iteration:
 	CMP R4, #12        //if R4 is greater than or equal to 12, stop program execution
 	BGE done           //jumping to the end of the program
 	ADD R4, R4, #1     //incrementing R4		
+	MOV R5,     #0     //setting R5 back to 0
 position:
 	CMP   R5, #11        //if R5 is greater than or equal to 11, stop program execution
 	BGE   position_done  //11 is used because comparing element i and i+1: hence i+1=12 when i=1
-	ADD   R5, R5, #1     //incrementing R5
 	ADD   R6, R5, #1     //compute R5+1, the address of the element to compare against, in R6 
 	LDRSB R7, [R3, R5]   //load data at position R5 from the array into R7
 	LDRSB R8, [R3, R6]   //load data at position R5+1 from the array into R8
 	CMP   R7, R8         //only swap when R7 > R8
-	BLE   position       //so skip swap and jump to next step of loop 
-	STR   R8, [R3, R5]   //store R7 into array position R6
-	STR   R7, [R3, R6]   //store R8 into array position R5
+	BLE   swapped        //so skip swap and jump to next step of loop 
+	STRB  R8, [R3, R5]   //store R7 into array position R6
+	STRB  R7, [R3, R6]   //store R8 into array position R5
+swapped:
+	ADD   R5, R5, #1     //incrementing R5
 	B   position         //this iteration of the inner loop is done
 position_done:
 	B iteration        //this iteration of the outer loop is done
@@ -46,20 +48,20 @@ done:
 	BX LR
 
 .data
-
 array:
-	.byte 0x08
-	.byte 0x08
-	.byte 0x08
-	.byte 0x08
-	.byte 0x10
-	.byte 0xFF
-	.byte 0x10
-	.byte 0xFF
-	.byte 0x10
-	.byte 0xFF
-	.byte 0x10
-	.byte 0xFF
+
+.byte 0xDE
+.byte 0x2D
+.byte 0x00
+.byte 0x62
+.byte 0x04
+.byte 0xDE
+.byte 0xFB
+.byte 0x7A
+.byte 0x4C
+.byte 0xF6
+.byte 0xFC
+.byte 0x05
 
 //rest of array
 
