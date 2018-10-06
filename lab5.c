@@ -144,9 +144,9 @@ const int notes[][2] = {
 #define GPLEV    ((volatile unsigned int *) (gpio + 13))
 //timer addresses
 #define TIMER_CS  ((volatile unsigned int *) (sys_timer + 0x0))
-#define TIMER_CLO ((volatile unsigned int *) (sys_timer + 0x4))
-#define TIMER_C1  ((volatile unsigned int *) (sys_timer + 0x10))
-#define TIMER_C2  ((volatile unsigned int *) (sys_timer + 0x14))
+#define TIMER_CLO ((volatile unsigned int *) (sys_timer + 0x1))
+#define TIMER_C1  ((volatile unsigned int *) (sys_timer + 0x4))
+#define TIMER_C2  ((volatile unsigned int *) (sys_timer + 0x5))
 #define INPUT  0
 #define OUTPUT 1
 
@@ -206,6 +206,8 @@ void pioInit() {
 	  exit(-1);
   }
 
+  sys_timer = (volatile unsigned *) reg_map;
+
 }
  
 //-----GPIO FUNCTIONS-----
@@ -246,29 +248,46 @@ void digitalWrite(int pin, int value) {
 
 //plays a note of frequency frequency (Hz) for time time (s)
 void playNote(int frequency, int time) {
+  
+  //if time==0 immediately return
+  if (time==0) {return;}
+  
   //a square wave will be modulated by a step up - down function defined by System Timer 1
-
   //we first reset Timer 1
   TIMER_CS[0] |= 0b0100;
-  //we then write Timer 2 Compare register with the current time plus an offset
-  TIMER_C1[0] = TIMER_CLO + time*1000000; //multiply by 1e6 as timer counts in us
+  //we then write Timer 1 Compare register with the current time plus an offset
+  TIMER_C1[0] = TIMER_CLO[0] + time*1000; //multiply by 1e3 as timer counts in us
 
   //while time has not yet elapsed we generate a square wave of the correct frequency
   int time_elapsed = 0; //high when time elapsed >= time
 
-  //initializing the speakerState variable
+  //when 0, the speaker is low. when 1, the speaker is high
   int speakerState = 0;
 
-  while (time_elapsed == 0) {
-    time_elapsed = ((unsigned int) TIMER_CS[0] >> 1)&1;
+  //after every changeTime increments in CLO, speakerState toggles
+  int changeTime  = 0;
+  //used to track changeTime increments
+  int numToggles  = 0;
+  if (frequency != 0) {
+	changeTime  = 1000000/(2*frequency);
+  	numToggles = ((unsigned int) TIMER_CLO[0]) / changeTime;
+  }
 
+  while (time_elapsed == 0) {
+    //printf("TIMER_CS[0] %x\n", TIMER_CS);	  
+    time_elapsed = ((unsigned int) TIMER_CS[0] >> 1)&1;
+    //printf("time_elapsed %d", time_elapsed);
     //generating a square wave at a specified frequency
     //change the state of the output after every 1e6/(2*frequency) clock cycles
     //Modulo operator provides this
 
-    int changeTime = 1000000/(2*frequency);
-    
-    if ((unsigned int) TIMER_CLO[0] % changeTime == 0) {
+    //printf("TIMER_CLO[0] %u\n", TIMER_CLO[0]);
+    //printf("num_measured_toggles %u\n", ((unsigned int) TIMER_CLO[0]) / changeTime);
+    //printf("num toggles %u\n", num_toggles);
+    if (changeTime == 0) {}
+    else if (((unsigned int) TIMER_CLO[0]) / changeTime > numToggles) {
+      //printf("incrementing...");
+      numToggles += 1;    
       speakerState = ~speakerState;
       digitalWrite(SPEAKER_PIN, speakerState);
     }
@@ -280,10 +299,9 @@ void playNote(int frequency, int time) {
 
 
 //plays a two dimensional array of numbers with each element given by [frequency, time]
-void playArray(int array[][2]) {
-  //first finding the size of the array
-  size_t numNotes = sizeof(array)/sizeof(array[0]);
-  for (size_t i = 0; i < numNotes; i++) {
+void playArray(int array[][2], int numNotes) {
+  for (int i = 0; i < numNotes; i++) {
+    printf("playing tone %d\n", i);
     playNote(array[i][0], array[i][1]);
   }
 }
@@ -292,12 +310,10 @@ int main() {
   printf("starting program...\n");
   pioInit();
   pinMode(SPEAKER_PIN, 1);
+  //finding size of array
+  int numNotes = sizeof(notes)/sizeof(notes[0]);
+  printf("array contains %d notes\n", numNotes);
   printf("playing tones...\n");
-  while (1) {
-	  digitalWrite(SPEAKER_PIN, 1);
-  }
-  //TIMER_CS[0] |=0b100;
-  //playNote(500, 10);
-  //playArray(notes);
+  playArray(notes, numNotes);
   printf("finished playing tones...\n");
 }
