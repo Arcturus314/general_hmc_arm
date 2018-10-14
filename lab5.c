@@ -403,16 +403,10 @@ void playNote(int frequency, int time) {
   }
 
   while (time_elapsed == 0) {
-    //printf("TIMER_CS[0] %x\n", TIMER_CS);	  
     time_elapsed = ((unsigned int) TIMER_CS[0] >> 1)&1;
-    //printf("time_elapsed %d", time_elapsed);
     //generating a square wave at a specified frequency
     //change the state of the output after every 1e6/(2*frequency) clock cycles
-    //Modulo operator provides this
 
-    //printf("TIMER_CLO[0] %u\n", TIMER_CLO[0]);
-    //printf("num_measured_toggles %u\n", ((unsigned int) TIMER_CLO[0]) / changeTime);
-    //printf("num toggles %u\n", num_toggles);
     if (changeTime == 0) {}
     else if (((unsigned int) TIMER_CLO[0]) / changeTime > numToggles) {
       //printf("incrementing...");
