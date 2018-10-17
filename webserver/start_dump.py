@@ -1,11 +1,11 @@
 #Kaveh Pezeshki
 #10/10/2018
-#Manages dump1090 output and writes most recent output to file dump1090out.txt
+#Manages dump1090 output and writes most recent output to file flights.txt
 
 import subprocess
 import time
 
-output_file = "/home/pi/e155/webserver/flights.txt"
+output_file = "/var/www/html/flights.txt"
 
 #first starting dump1090
 #returning an iterable with each set of plane printings

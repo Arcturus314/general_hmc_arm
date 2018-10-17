@@ -14,13 +14,21 @@
 #define perifBase 0x3F000000
 #define GPIOBASE  perifBase+0x200000
 #define TIMERBASE perifBase+0x3000
-#define SPIBASE   perifBase+0x204000 //152
+#define SPIBASE   perifBase+0x204000 //from page 152
 
 // Constants for Pin funct
 #define OUTPUT 0b001
 
 //LED output pin
 #define LEDPIN 21
+
+//IO memory addresses
+#define TIMER_CONTROL_STATUS (* (volatile unsigned int *) (TIMER))
+#define TIMER_COUNTER_LOW    (* (volatile unsigned int *) (TIMER+1))
+#define TIMER_1_COMPARE      (* (volatile unsigned int *) (TIMER+4))
+ 
+#define SPI0_FIFO    (*(volatile unsigned int *) (SPI+1))
+#define SPI0_CONTROL (*(volatile unsigned int *) (SPI+0)) 
 
 volatile unsigned int *GPIO;  // pointer to base of GPIO registers
 volatile unsigned int *TIMER; // pointer to base of timer registers
@@ -53,7 +61,7 @@ volatile unsigned int *phys_to_virt(long base)
 // Sets up the pointers for GPIO.h
 void SetUpPerif()
 {
-	GPIO = phys_to_virt(GPIOBASE);
+  GPIO = phys_to_virt(GPIOBASE);
 }
 
 void SetUpTimer() {
@@ -96,19 +104,30 @@ void setPinType( int pin, int func)
 */
 void SetUpSPI0(int cs, int cpha, int cpol, int clear, int cspol, int clkspeed) {
   SPI = phys_to_virt(SPIBASE);
-  //setting control bits
-  *(SPI+0) = cs + (cpha << 2) + (cpol << 3) + (clear << 4) + (cspol << 6);
   //setting pin states, pin type 4 corresponds to SPI
   setPinType(8, 4);  //CE
   setPinType(9, 4);  //MISO
   setPinType(10, 4); //MOSI
   setPinType(11, 4); //SCLK
+  //reading the current SPI status
+  int status = *(SPI+0);
+  //printf("pre-setup status 0x%x\n", status);
   //settng up SPI clock
   //bits 15:0 of CLK register define the clock divider, where SCLK = core clk / CDIV
   //The core clock is 250MHz
-  *(SPI+2) = 250000000/clkspeed;
+  int clkdivide = 25000000/clkspeed;
+  *(SPI+2)      = clkdivide;
+  //printf("Clock divide coefficient %d\n", *(SPI+2));
+  //setting control bits
+  int control = cs + (cpha << 2) + (cpol << 3) + (clear << 4) + (cspol << 6);
+  //printf("Setting SPI control bits as %x\n", control);
+  *(SPI+0)  = control;
   //taking the SPI interface out of power saving mode
-  *(SPI+0) |= 1 >> 7;
+  *(SPI+0) |= 1 << 7;
+
+  //reading the current SPI status
+  status = *(SPI+0);
+  //printf("post-setup status 0x%x\n", status);
 }
 
 // Used to write a pin high or low
@@ -126,35 +145,60 @@ void digitalWrite(int pin, int val)
 }
 
 //used to delay program execution by a certain number of ms
-//@param timerNum: the system timer (0-3) to use
-//@param ms: the time to delay in microseconds
-void delayms(int timerNum, int us) {
-  //setting up relevant pointers
-  volatile unsigned int* controlStatus = TIMER;
-  volatile unsigned int* counterLow    = TIMER + 1;
-  volatile unsigned int* compare       = TIMER + 3 + timerNum;
+//@param us: the time to delay in microseconds
+void delayus(int us) {
   //clearing relevant CS bit
-  *(controlStatus) = 1 << timerNum;
+  TIMER_CONTROL_STATUS = 1 << 1;
   //setting the compare register
-  *(compare)       = *(controlStatus) + us;
+  TIMER_1_COMPARE = TIMER_COUNTER_LOW + us;
   //waiting until the relevant CS bit becomes 1
   int timerStatus = 0;
-  while(timerStatus == 0) {timerStatus = (*(controlStatus) >> timerNum) & 1;}
+  while(timerStatus == 0) {timerStatus = (TIMER_CONTROL_STATUS >> 1) & 1;}
 }
 
-//writes a given byte of data over SPI0
+//writes a given byte of data over SPI0 and returns the read byte
 //@param byte: the data to send
-void writeSPI0Byte(char byte) {
-  *(SPI+1) = byte;
-}
-
-//waits until an SPI transfer has completed and returns the result
-char readSPI0Byte() {
-  volatile unsigned int readComplete = (*(SPI+0) >> 16) & 1; //only 1 if DONE bit is 1
+char writeReadSPI0Byte(char byte) {
+  SPI0_FIFO = byte;
+  //printf("Current SPI Status %x\n", SPI0_CONTROL);
+  volatile unsigned int readComplete = (SPI0_CONTROL >> 16) & 1; //only 1 if DONE bit is 1
+  //printf("Current readComplete Status %x\n", readComplete);
   while (readComplete == 0) {
     //we do nothing
+  readComplete = (SPI0_CONTROL >> 16) & 1; //only 1 if DONE bit is 1
+  //printf("Current readComplete Status %x\n", readComplete);
   }
-  return *(SPI+1); //received data
+  return SPI0_FIFO; //received data
 }
+
+//writes a given short of data over SPIO0 and returns the rea short
+//@param send: the short to send
+ushort writeReadSPI0Short(ushort send) {
+	//reusing writeReadSPI0Byte
+	//sending the upper bit
+	char byte1 = writeReadSPI0Byte( (send>>8) );
+	//sending the lower bit
+	char byte2 = writeReadSPI0Byte( (send & 0x00FF) );
+	//printf("byte1 byte2 %x %x\n", byte1,byte2);
+	//combining the two received bytes
+	ushort received = ( ((ushort) byte1) << 8) | byte2;
+	return received;	
+}
+
+//stops SPI communication, sets CS lines HIGH
+void stopSPI() {
+  //printf("masking with %X\n", 0xFFFFFF7F);
+  *(SPI+0) &= 0xFFFFFF7F; //writing 0 into TA bit
+ 
+  //reading the current SPI status
+  //int status = *(SPI+0);
+  //printf("current SPI status 0x%x\n", status);
+}
+
+//starts SPI communication, sets CS lines LOW
+void startSPI() {
+  *(SPI+0) |= 1 << 7; //writing 1 into TA bit
+}
+
 
 #endif

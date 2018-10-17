@@ -6,11 +6,18 @@
 <html>
 	<head>
 		<title>Brightness, LED Control, Flight Info</title>
+
 	</head>
 	<body>
-		<h1>Nearby Flights</h1>
-		Using an <a href="http://www.rtl-sdr.com">RTL-SDR V3</a>. All credit for ADS-B parsing to <a href="https://github.com/antirez/dump1090">dump1090</a>.
 		<div>
+		<h4>ADC Phototransistor Voltage</h4>
+		<form action="cgi-bin/READVOLTAGE" method="get" target="voltage">
+		<iframe id="voltage" name="voltage" width="650"></iframe>
+		</div>
+
+		<div>
+		<h4>Nearby Flights</h4>
+		Using an <a href="http://www.rtl-sdr.com">RTL-SDR V3</a>. All credit for ADS-B parsing to <a href="https://github.com/antirez/dump1090">dump1090</a>.
 			<iframe name="flights" src="flights.txt" width="650"></iframe>
 		</div>
 	</body>
