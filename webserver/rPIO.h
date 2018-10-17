@@ -1,5 +1,5 @@
 //Kaveh Pezeshki kpezeshki@hmc.edu
-//10/12/2018 A modified version of GPIO.h provided in the lab with added timer support
+//10/12/2018 A modified version of GPIO.h provided in the lab with added timer and SPI support
 
 #ifndef _INCLUDE_GPIO_
 #define _INCLUDE_GPIO_
