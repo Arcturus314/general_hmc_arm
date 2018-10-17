@@ -10,14 +10,45 @@
 	</head>
 	<body>
 		<div>
-		<h4>ADC Phototransistor Voltage</h4>
+		<h3>ADC Phototransistor Voltage</h3>
 		<form action="cgi-bin/READVOLTAGE" method="get" target="voltage">
-		<iframe id="voltage" name="voltage" width="650"></iframe>
+			<input type="submit" value="Update Voltage">
+		</form>
+		<iframe id="voltage" name="voltage" width="650" height="30"></iframe>
 		</div>
 
 		<div>
-		<h4>Nearby Flights</h4>
+		<h3>LED control</h3>
+
+		Only 2 LEDs are included here. More can be added with the same method.
+
+		<h4>LED1</h4>
+		<form action="cgi-bin/LED1ON" method="get" target="led1state">
+			<input type="submit" value="Turn LED 1 On">
+		</form>
+		<form action="cgi-bin/LED1OFF" method="get" target="led1state">
+			<input type="submit" value="Turn LED 1 Off">
+		</form>
+		<iframe id="led1state" name="led1state" width="650" height="30"></iframe>
+
+		<h4>LED2</h4>
+		<form action="cgi-bin/LED2ON" method="get" target="led2state">
+			<input type="submit" value="Turn LED 2 On">
+		</form>
+		<form action="cgi-bin/LED2OFF" method="get" target="led2state">
+			<input type="submit" value="Turn LED 2 Off">
+		</form>
+		<iframe id="led2state" name="led2state" width="650" height="30"></iframe>
+
+
+
+
+
+		<div>
+		<h3>Nearby Flights</h3>
 		Using an <a href="http://www.rtl-sdr.com">RTL-SDR V3</a>. All credit for ADS-B parsing to <a href="https://github.com/antirez/dump1090">dump1090</a>.
+		</div>
+		<div>
 			<iframe name="flights" src="flights.txt" width="650"></iframe>
 		</div>
 	</body>
