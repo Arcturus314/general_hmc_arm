@@ -5,7 +5,7 @@
 import subprocess
 import time
 
-output_file = "/var/www/html/flights.txt"
+output_file = "/var/www/html/flights2.txt"
 
 #first starting dump1090
 #returning an iterable with each set of plane printings
